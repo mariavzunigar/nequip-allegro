@@ -27,7 +27,7 @@ data:
 
   # Specify dataset files (all .xyz files in working directory)
   split_dataset:
-    file_path: ./*.xyz
+    file_path: ./alltraj.xyz
     train: 0.8
     val: 0.1
     test: 0.1
