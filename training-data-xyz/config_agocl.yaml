@@ -32,7 +32,7 @@ cutoff_radius: 5.0
 # Because of this distinction, these variables show up as arguments across different categories, including, data, model, metrics and even callbacks.
 # In this case, we fix both to be the same, so we define a single set of each here and use variable interpolation to retrieve them below.
 # This ensures a single location where the values are set to reduce the chances of mis-configuring runs.
-chemical_symbols: [Si] 
+chemical_symbols: [Ag, Cl, O] 
 model_type_names: ${chemical_symbols}
 
 
@@ -48,7 +48,7 @@ data:
   
   # here we take an ASE-readable file (in extxyz format) and split it into train:val:test = 80:10:10
   split_dataset:
-    file_path: ./sitraj.xyz
+    file_path: ./ff_ag50_4o_2o2_4cl_43.xyz
     train: 0.8
     val: 0.1
     test: 0.1
@@ -110,7 +110,7 @@ trainer:
   # use any Lightning supported logger
   logger:
     _target_: lightning.pytorch.loggers.csv_logs.CSVLogger
-    name: tutorial_log
+    name: AgClO_log
     save_dir: ./results  # use resolver to place wandb logs in hydra's output directory
     flush_logs_every_n_steps: 100
 
