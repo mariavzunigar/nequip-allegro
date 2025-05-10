@@ -1,0 +1,92 @@
+supercell:
+    file: POSCAR_ag_2o_2cl
+    format: vasp
+    index: 0
+    replicate: [1, 1, 1]
+    jitter: 0.0
+
+# Set up FLARE calculator with (sparse) Gaussian process
+flare_calc:
+    gp: SGP_Wrapper
+    kernels:
+        - name: NormalizedDotProduct                       # select kernel for comparison of atomic environments
+          sigma: 2.0                                       # signal variance, this hyperparameter will be trained, and is typically between 1 and 10.
+          power: 2                                         # power of the kernel, influences body-order
+    descriptors:
+        - name: B2                                         # Atomic Cluster Expansion (ACE) descriptor from R. Drautz (2019). FLARE can only go from B1 up to B3 currently.
+          nmax: 12                                          # Radial fidelity of the descriptor (higher value = higher cost)
+          lmax: 4                                          # Angular fidelity of the descriptor (higher value = higher cost)
+          cutoff_function: quadratic                       # Cutoff behavior
+          radial_basis: chebyshev                          # Formalism for the radial basis functions
+          cutoff_matrix: [[7.0, 4.0, 4.0],[4.0, 4.0, 4.0],[4.0, 4.0, 4.0]]                           # In angstroms. NxN array for N_species in a system.
+    energy_noise: 0.096                                    # Energy noise hyperparameter, will be trained later. Typically set to 1 meV * N_atoms.
+    forces_noise: 0.1                                     # Force noise hyperparameter, will be trained later. System dependent, typically between 0.05 meV/A and 0.2 meV/A.
+    stress_noise: 0.001                                    # Stress noise hyperparameter, will be trained later. Typically set to 0.001 meV/A^3.
+    energy_training: True
+    force_training: True
+    stress_training: True
+    species:
+        - 47 
+        - 8    
+        - 17                                            # Atomic number of your species (here, 13 = Al).
+    single_atom_energies:
+        - 0 
+        - 0   
+        - 0                  # Single atom Es to bias the E prediction of the model. Can help in systems with poor initial E estimations. Length must equal the number of species.
+    cutoff: 7.0                  # Cutoff for the (ACE) descriptor. Typically informed by the RDF of the system. Should equal the maximum value in the cutoff_matrix.
+    variance_type: local                                   # Calculate atomic uncertainties.
+    max_iterations: 20                                     # Maximum steps taken during each hyperparameter optimization call.
+    use_mapping: True                                      # Print mapped model (ready for use in LAMMPS) during trajectory. Model is re-mapped and replaced if new DFT calls are made throughout the trajectory.
+           
+
+dft_calc:
+    name: Vasp
+    kwargs: 
+        command: "srun vasp_gam"
+        xc: PBE
+        kpts: [1, 1, 1]
+        istart: 0
+        ediff: 1.0e-5
+        encut: 400
+        ismear: 0
+        sigma: 0.2
+        ispin: 2
+        lreal: Auto
+        prec: Accurate
+        algo: Very_Fast
+        ncore: 10
+        nelm: 500
+        nelmdl: -9
+        nelmin: 6
+        lcharg: False
+        lwave: False
+        lscalapack: False
+    params: {}
+
+
+# Set up On-the-fly training and MD
+otf:
+    mode: fresh
+    md_engine: PyLAMMPS
+    md_kwargs: 
+        command: "srun lmp"
+        specorder: [Ag, O, Cl]
+        dump_period: 5
+        pair_style: flare
+        fix: 
+            - "1 all nvt temp 300 523 0.1"
+        keep_alive: False
+    initial_velocity: 300                                   # Initialize the velocities (units of Kelvin)
+    dt: 0.001                                                # Set the time step in picoseconds ( 0.001 = 1 fs here)
+    number_of_steps: 5000                                    # Total number of MD steps to be taken
+    output_name: 0_ase
+    init_atoms: [0] # Initial atoms to be added to the sparse set
+    std_tolerance_factor: -0.05                             # The uncertainty threshold above which the DFT will be called
+    max_atoms_added: -1                                      # Allow for all atoms in a given frame to be added to the sparse set if uncertainties permit
+    train_hyps: [5,inf]                                      # Define range in which hyperparameters will be optimized. Here, hyps are optimized at every DFT call after the 5th call.
+    write_model: 3   
+    store_dft_output: [[OUTCAR,OSZICAR], ./]                                      
+    update_style: threshold                                  # Sparse set update style. Atoms above a defined "threshold" will be added using this method
+    update_threshold: 0.01   #Threshold (Thr) if "update_style = threshold". Thr represents relative uncer-ty to mean atomic uncer-ty, where atoms above are added to sparse set
+    force_only: False 
+    min_steps_with_model: 1
