@@ -1,0 +1,13 @@
+Pseudopotentials are in $VASP_PP_PATH
+
+Inactive Modules:
+  1) intelmpi/18.0
+
+The following have been reloaded with a version change:
+  1) intel/18.0 => intel/2023.1
+
+Pseudopotentials are in $VASP_PP_PATH
+-23.3589701
+Pseudopotentials are in $VASP_PP_PATH
+-23.3590101
+finish!
